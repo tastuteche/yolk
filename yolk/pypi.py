@@ -16,15 +16,14 @@ License  : BSD (See COPYING)
 
 __docformat__ = 'restructuredtext'
 
+import ast
 import re
 import platform
 if platform.python_version().startswith('2'):
     import xmlrpclib
-    import cPickle
     import urllib2
 else:
     import xmlrpc.client as xmlrpclib
-    import pickle
     import urllib.request as urllib2
 import os
 import time
@@ -34,7 +33,7 @@ import urllib
 from yolk.utils import get_yolk_dir
 
 
-XML_RPC_SERVER = 'http://pypi.python.org/pypi'
+XML_RPC_SERVER = 'https://pypi.python.org/pypi'
 
 class addinfourl(urllib2.addinfourl):
     """
@@ -80,9 +79,9 @@ class ProxyTransport(xmlrpclib.Transport):
         '''Send xml-rpc request using proxy'''
         #We get a traceback if we don't have this attribute:
         self.verbose = verbose
-        url = 'http://' + host + handler
+        url = 'https://' + host + handler
         request = urllib2.Request(url)
-        request.add_data(request_body)
+        request.data = request_body
         # Note: 'Host' and 'Content-Length' are added automatically
         request.add_header('User-Agent', self.user_agent)
         request.add_header('Content-Type', 'text/xml')
@@ -164,7 +163,7 @@ class CheeseShop(object):
         Returns PyPI's XML-RPC server instance
         """
         check_proxy_setting()
-        if os.environ.has_key('XMLRPC_DEBUG'):
+        if 'XMLRPC_DEBUG' in os.environ:
             debug = 1
         else:
             debug = 0
@@ -203,13 +202,16 @@ class CheeseShop(object):
         """Return list of pickled package names from PYPI"""
         if self.debug:
             self.logger.debug("DEBUG: reading pickled cache file")
-        return cPickle.load(open(self.pkg_cache_file, "r"))
+        print(self.pkg_cache_file)
+        with open(self.pkg_cache_file, 'r') as input_file:
+            return ast.literal_eval(input_file.read())
 
     def fetch_pkg_list(self):
         """Fetch and cache master list of package names from PYPI"""
         self.logger.debug("DEBUG: Fetching package name list from PyPI")
         package_list = self.list_packages()
-        cPickle.dump(package_list, open(self.pkg_cache_file, "w"))
+        with open(self.pkg_cache_file, 'w') as output_file:
+            print(package_list, file=output_file)
         self.pkg_list = package_list
 
     def search(self, spec, operator):
@@ -275,7 +277,7 @@ class CheeseShop(object):
 
             #Try the package's metadata directly in case there's nothing
             #returned by XML-RPC's release_urls()
-            if metadata and metadata.has_key('download_url') and \
+            if metadata and 'download_url' in metadata  and \
                         metadata['download_url'] != "UNKNOWN" and \
                         metadata['download_url'] != None:
                 if metadata['download_url'] not in all_urls:
