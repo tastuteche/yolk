@@ -35,6 +35,7 @@ from yolk.utils import get_yolk_dir
 
 XML_RPC_SERVER = 'https://pypi.python.org/pypi'
 
+
 class addinfourl(urllib2.addinfourl):
     """
     Replacement addinfourl class compatible with python-2.7's xmlrpclib
@@ -54,6 +55,7 @@ class addinfourl(urllib2.addinfourl):
         if self.headers is None:
             raise httplib.ResponseNotReady()
         return self.headers.items()
+
 
 urllib2.addinfourl = addinfourl
 
@@ -77,7 +79,7 @@ class ProxyTransport(xmlrpclib.Transport):
 
     def request(self, host, handler, request_body, verbose):
         '''Send xml-rpc request using proxy'''
-        #We get a traceback if we don't have this attribute:
+        # We get a traceback if we don't have this attribute:
         self.verbose = verbose
         url = 'https://' + host + handler
         request = urllib2.Request(url)
@@ -109,10 +111,10 @@ def check_proxy_setting():
 
     if not http_proxy.startswith('http://'):
         match = re.match('(http://)?([-_\.A-Za-z]+):(\d+)', http_proxy)
-        #if not match:
+        # if not match:
         #    raise Exception('Proxy format not recognised: [%s]' % http_proxy)
         os.environ['HTTP_PROXY'] = 'http://%s:%s' % (match.group(2),
-                match.group(3))
+                                                     match.group(3))
     return
 
 
@@ -138,8 +140,8 @@ class CheeseShop(object):
         """
         Get a package name list from disk cache or PyPI
         """
-        #This is used by external programs that import `CheeseShop` and don't
-        #want a cache file written to ~/.pypi and query PyPI every time.
+        # This is used by external programs that import `CheeseShop` and don't
+        # want a cache file written to ~/.pypi and query PyPI every time.
         if self.no_cache:
             self.pkg_list = self.list_packages()
             return
@@ -149,7 +151,8 @@ class CheeseShop(object):
         if os.path.exists(self.pkg_cache_file):
             self.pkg_list = self.query_cached_package_list()
         else:
-            self.logger.debug("DEBUG: Fetching package list cache from PyPi...")
+            self.logger.debug(
+                "DEBUG: Fetching package list cache from PyPi...")
             self.fetch_pkg_list()
 
     def get_last_sync_file(self):
@@ -170,8 +173,8 @@ class CheeseShop(object):
         try:
             return xmlrpclib.Server(XML_RPC_SERVER, transport=ProxyTransport(), verbose=debug)
         except IOError:
-            self.logger("ERROR: Can't connect to XML-RPC server: %s" \
-                    % XML_RPC_SERVER)
+            self.logger("ERROR: Can't connect to XML-RPC server: %s"
+                        % XML_RPC_SERVER)
 
     def get_pkg_cache_file(self):
         """
@@ -182,12 +185,12 @@ class CheeseShop(object):
     def query_versions_pypi(self, package_name):
         """Fetch list of available versions for a package from The CheeseShop"""
         if not package_name in self.pkg_list:
-            self.logger.debug("Package %s not in cache, querying PyPI..." \
-                    % package_name)
+            self.logger.debug("Package %s not in cache, querying PyPI..."
+                              % package_name)
             self.fetch_pkg_list()
-        #I have to set version=[] for edge cases like "Magic file extensions"
-        #but I'm not sure why this happens. It's included with Python or
-        #because it has a space in it's name?
+        # I have to set version=[] for edge cases like "Magic file extensions"
+        # but I'm not sure why this happens. It's included with Python or
+        # because it has a space in it's name?
         versions = []
         for pypi_pkg in self.pkg_list:
             if pypi_pkg.lower() == package_name.lower():
@@ -202,7 +205,7 @@ class CheeseShop(object):
         """Return list of pickled package names from PYPI"""
         if self.debug:
             self.logger.debug("DEBUG: reading pickled cache file")
-        print(self.pkg_cache_file)
+        # print(self.pkg_cache_file)
         with open(self.pkg_cache_file, 'r') as input_file:
             return ast.literal_eval(input_file.read())
 
@@ -240,15 +243,15 @@ class CheeseShop(object):
         try:
             return self.xmlrpc.release_data(package_name, version)
         except xmlrpclib.Fault:
-            #XXX Raises xmlrpclib.Fault if you give non-existant version
-            #Could this be server bug?
+            # XXX Raises xmlrpclib.Fault if you give non-existant version
+            # Could this be server bug?
             return
 
     def package_releases(self, package_name):
         """Query PYPI via XMLRPC interface for a pkg's available versions"""
         if self.debug:
-            self.logger.debug("DEBUG: querying PyPI for versions of " \
-                    + package_name)
+            self.logger.debug("DEBUG: querying PyPI for versions of "
+                              + package_name)
         return self.xmlrpc.package_releases(package_name)
 
     def get_download_urls(self, package_name, version="", pkg_type="all"):
@@ -258,7 +261,7 @@ class CheeseShop(object):
             versions = [version]
         else:
 
-            #If they don't specify version, show em all.
+            # If they don't specify version, show em all.
 
             (package_name, versions) = self.query_versions_pypi(package_name)
 
@@ -272,20 +275,21 @@ class CheeseShop(object):
                         urls['packagetype'].startswith("bdist"):
                     all_urls.append(urls['url'])
                 elif pkg_type == "all":
-                    #All
+                    # All
                     all_urls.append(urls['url'])
 
-            #Try the package's metadata directly in case there's nothing
-            #returned by XML-RPC's release_urls()
-            if metadata and 'download_url' in metadata  and \
-                        metadata['download_url'] != "UNKNOWN" and \
-                        metadata['download_url'] != None:
+            # Try the package's metadata directly in case there's nothing
+            # returned by XML-RPC's release_urls()
+            if metadata and 'download_url' in metadata and \
+                    metadata['download_url'] != "UNKNOWN" and \
+                    metadata['download_url'] != None:
                 if metadata['download_url'] not in all_urls:
                     if pkg_type != "all":
                         url = filter_url(pkg_type, metadata['download_url'])
                         if url:
                             all_urls.append(url)
         return all_urls
+
 
 def filter_url(pkg_type, url):
     """
@@ -314,6 +318,7 @@ def filter_url(pkg_type, url):
     elif pkg_type == "egg":
         if url.lower().endswith(".egg"):
             return url
+
 
 def get_seconds(hours):
     """
